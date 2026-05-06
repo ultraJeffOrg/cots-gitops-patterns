@@ -1,0 +1,11 @@
+# Minimal values to get the vendor worker chart running on OpenShift
+replicaCount: 1
+
+podSecurityContext:
+  runAsNonRoot: true
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL

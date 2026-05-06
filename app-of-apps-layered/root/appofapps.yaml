@@ -1,0 +1,22 @@
+# Root Application — the app of apps
+# Manages two child Applications via sync waves:
+#   Wave 0: base-install (vendor Helm charts as-is with minimal OpenShift values)
+#   Wave 1: ocp-overrides (patches specific fields using SSA with Force)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cots-platform
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/cots-app-config.git
+    targetRevision: main
+    path: app-of-apps-layered/root
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openshift-gitops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

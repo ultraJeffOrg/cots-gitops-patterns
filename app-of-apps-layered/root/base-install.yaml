@@ -1,0 +1,67 @@
+# Wave 0: Install three vendor Helm charts with OpenShift-safe values
+# This app owns the initial install but yields specific fields to the overrides app
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cots-base-install
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cots-app
+
+  sources:
+    # Chart 1: Frontend (e.g., vendor dashboard)
+    - repoURL: https://charts.example.com
+      chart: cots-frontend
+      targetRevision: 2.4.0
+      helm:
+        releaseName: cots-frontend
+        valueFiles:
+          - $repo/base/chart-values/frontend.yaml
+
+    # Chart 2: API server
+    - repoURL: https://charts.example.com
+      chart: cots-api
+      targetRevision: 3.1.0
+      helm:
+        releaseName: cots-api
+        valueFiles:
+          - $repo/base/chart-values/api.yaml
+
+    # Chart 3: Worker / background processor
+    - repoURL: https://charts.example.com
+      chart: cots-worker
+      targetRevision: 1.8.0
+      helm:
+        releaseName: cots-worker
+        valueFiles:
+          - $repo/base/chart-values/worker.yaml
+
+    # Git repo reference for valueFiles above
+    - repoURL: https://github.com/your-org/cots-app-config.git
+      targetRevision: main
+      ref: repo
+
+  # Yield these fields to the overrides app (wave 1) so we don't fight over them
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/securityContext
+        - /spec/template/spec/containers/0/securityContext
+        - /spec/template/spec/containers/0/resources
+    - group: networking.k8s.io
+      kind: Ingress
+      jsonPointers:
+        - /metadata/annotations
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,15 @@
+# Minimal values to get the vendor frontend chart running on OpenShift
+replicaCount: 2
+
+podSecurityContext:
+  runAsNonRoot: true
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8080

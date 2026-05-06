@@ -1,0 +1,16 @@
+# Replace vendor Ingress annotations with OpenShift Route
+# This patch converts the frontend's Ingress to use OpenShift-native routing
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: cots-frontend
+spec:
+  to:
+    kind: Service
+    name: cots-frontend
+    weight: 100
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
