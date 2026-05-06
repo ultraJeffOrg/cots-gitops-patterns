@@ -1,7 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cots-worker
+  name: cots-frontend
+  namespace: cots-app
 spec:
   template:
     spec:
@@ -10,7 +11,7 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: cots-worker
+        - name: cots-frontend
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true

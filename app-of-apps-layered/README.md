@@ -40,9 +40,11 @@ clear field ownership or they fight.
    three vendor Helm charts with OpenShift-safe values. Uses `ignoreDifferences`
    on fields that the overrides app will own.
 
-2. **Wave 1 — `ocp-overrides`**: Kustomize-based ArgoCD Application that patches
-   the Helm-rendered resources. Uses `ServerSideApply=true` and `Force=true` to
-   take field ownership from the base app.
+2. **Wave 1 — `ocp-overrides`**: Directory of plain partial manifests that ArgoCD
+   applies via SSA. Each manifest only contains the fields you want to override —
+   the API server merges them into the existing resources. Uses `ServerSideApply=true`
+   and `Force=true` to take field ownership. Includes retry logic for the race
+   condition where wave 0's resources may not exist yet.
 
 ## Why two apps instead of one?
 
@@ -77,11 +79,9 @@ app-of-apps-layered/
 │       ├── frontend.yaml        # Helm values for the frontend chart
 │       ├── api.yaml             # Helm values for the API chart
 │       └── worker.yaml          # Helm values for the worker chart
-└── overrides/
-    ├── kustomization.yaml
-    └── patches/
-        ├── fix-scc-frontend.yaml
-        ├── fix-scc-api.yaml
-        ├── fix-scc-worker.yaml
-        └── routes.yaml          # OpenShift Route for the frontend
+└── overrides/                       # Plain partial manifests (no kustomization.yaml)
+    ├── fix-scc-frontend.yaml        # ArgoCD applies these via SSA — only the fields
+    ├── fix-scc-api.yaml             # present get merged into the existing resources
+    ├── fix-scc-worker.yaml
+    └── routes.yaml                  # OpenShift Route for the frontend
 ```

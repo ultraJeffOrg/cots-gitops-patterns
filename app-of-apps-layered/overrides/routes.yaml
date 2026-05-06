@@ -4,6 +4,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: cots-frontend
+  namespace: cots-app
 spec:
   to:
     kind: Service

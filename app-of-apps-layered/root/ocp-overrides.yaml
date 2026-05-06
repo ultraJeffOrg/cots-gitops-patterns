@@ -1,5 +1,13 @@
 # Wave 1: Apply OpenShift-specific overrides on top of the base install
-# Uses ServerSideApply + Force to take ownership of fields from the base app
+# Uses ServerSideApply + Force to take ownership of fields from the base app.
+#
+# These are plain partial manifests (not Kustomize patches). SSA merges only
+# the fields present in each manifest into the existing resource — it does NOT
+# require a full resource definition. But the resource must already exist,
+# which is why this runs in wave 1 after the base install is healthy.
+#
+# Retry handles the race condition: if the base app's resources aren't fully
+# ready when this app first syncs, it will retry until they exist.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -16,10 +24,18 @@ spec:
     repoURL: https://github.com/your-org/cots-app-config.git
     targetRevision: main
     path: app-of-apps-layered/overrides
+    directory:
+      recurse: false
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 2m
     syncOptions:
       - ServerSideApply=true
       - Force=true
