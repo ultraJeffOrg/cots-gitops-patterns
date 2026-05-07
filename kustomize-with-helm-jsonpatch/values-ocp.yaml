@@ -1,0 +1,12 @@
+# Helm values for OpenShift — set what the chart exposes natively.
+# Anything the chart DOESN'T expose gets fixed via JSON Patch in kustomization.yaml.
+replicaCount: 1
+
+podSecurityContext:
+  runAsNonRoot: true
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL

@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cots-app
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/cots-app-config.git
+    targetRevision: main
+    path: kustomize-with-helm-jsonpatch
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cots-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

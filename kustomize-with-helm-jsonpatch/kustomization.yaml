@@ -1,0 +1,108 @@
+# Approach 4: Kustomize with Helm + JSON Patch
+#
+# Same as Approach 2 (kustomize-with-helm), but uses JSON Patch (RFC 6902)
+# instead of strategic merge patches. This matters when the vendor chart
+# sets fields you need to REMOVE — strategic merge can only add or update.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: cots-app
+
+helmCharts:
+  - name: cots-app
+    repo: https://charts.example.com
+    version: 1.2.3
+    releaseName: cots-app
+    namespace: cots-app
+    valuesFile: values-ocp.yaml
+
+resources:
+  - scc/cots-app-scc.yaml
+  - scc/scc-rolebinding.yaml
+
+patches:
+  # --- API Deployment ---
+  # Replace the entire pod securityContext (removes runAsUser: 0, runAsGroup: 0)
+  - target:
+      kind: Deployment
+      name: cots-app-api
+    patch: |
+      - op: replace
+        path: /spec/template/spec/securityContext
+        value:
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+
+  # Replace the entire container securityContext (removes allowPrivilegeEscalation,
+  # capabilities.add, privileged — all in one shot)
+  - target:
+      kind: Deployment
+      name: cots-app-api
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/securityContext
+        value:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          capabilities:
+            drop:
+              - ALL
+
+  # Add resource requests/limits (use "add" since they may not exist)
+  - target:
+      kind: Deployment
+      name: cots-app-api
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            cpu: "1"
+            memory: 512Mi
+
+  # --- Worker Deployment ---
+  - target:
+      kind: Deployment
+      name: cots-app-worker
+    patch: |
+      - op: replace
+        path: /spec/template/spec/securityContext
+        value:
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+      - op: replace
+        path: /spec/template/spec/containers/0/securityContext
+        value:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          capabilities:
+            drop:
+              - ALL
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+
+  # --- Catch-all: any Deployment missing a seccomp profile ---
+  # Uses "add" so it's a no-op if the path already exists from a targeted patch above
+  - target:
+      kind: Deployment
+    patch: |
+      - op: add
+        path: /spec/template/spec/securityContext/seccompProfile
+        value:
+          type: RuntimeDefault
+
+commonLabels:
+  app.kubernetes.io/part-of: cots-app

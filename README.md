@@ -6,7 +6,7 @@ using ArgoCD when the vendor's Helm chart wasn't written with OpenShift in mind.
 The most common issue: the chart's pods fail with SCC-related errors because the
 chart assumes vanilla Kubernetes security defaults.
 
-## Three approaches
+## Four approaches
 
 ### [Approach 1: Helm with Kustomize](helm-with-kustomize/)
 Helm is the primary source. ArgoCD uses multi-source to render the Helm chart and
@@ -24,14 +24,30 @@ child Applications run in sync waves — wave 0 installs the vendor charts, wave
 patches them for OpenShift using Server-Side Apply with Force. The two apps use
 `ignoreDifferences` + SSA to avoid fighting over field ownership.
 
+### [Approach 4: Kustomize with Helm + JSON Patch](kustomize-with-helm-jsonpatch/)
+Same as Approach 2 but uses JSON Patch (RFC 6902) instead of strategic merge
+patches. This is the approach you need when the vendor chart sets fields you must
+**remove** (`runAsUser: 0`, `capabilities.add`) — strategic merge can only add
+or update fields, never remove them.
+
 ## Which one should I use?
 
-| | Helm with Kustomize | Kustomize with Helm | App of Apps Layered |
-|---|---|---|---|
-| ArgoCD source type | Multi-source | Single source (Kustomize) | App of apps (multi-source + Kustomize) |
-| Helm lifecycle | ArgoCD manages it | Kustomize manages it | ArgoCD manages it |
-| Number of charts | One | One | Multiple |
-| Complexity | Moderate | Simple | More moving parts |
-| ArgoCD Helm visibility | Full (chart version, values) | None (just sees Kustomize) | Full per chart |
-| Field ownership | Kustomize patches | Kustomize patches | SSA with explicit ownership handoff |
-| Best for | Single chart, Helm-first teams | Single chart, Kustomize-first teams | Multi-chart COTS platforms |
+| | Helm with Kustomize | Kustomize with Helm | App of Apps Layered | JSON Patch |
+|---|---|---|---|---|
+| ArgoCD source type | Multi-source | Single source | App of apps | Single source |
+| Helm lifecycle | ArgoCD manages it | Kustomize manages it | ArgoCD manages it | Kustomize manages it |
+| Number of charts | One | One | Multiple | One |
+| Complexity | Moderate | Simple | Most complex | Simple |
+| Can remove fields | No | No | Partially (SSA `null`) | **Yes** (`op: replace/remove`) |
+| ArgoCD Helm visibility | Full | None | Full per chart | None |
+| Best for | Single chart, Helm-first | Single chart, Kustomize-first | Multi-chart platforms | Charts with insecure defaults that need removal |
+
+### Strategic merge vs JSON Patch — when does it matter?
+
+If the vendor chart sets `runAsUser: 0` and you need it gone, strategic merge
+**cannot help** — it can only add `runAsNonRoot: true` alongside the existing
+`runAsUser: 0`, and SCC still rejects the pod. JSON Patch's `replace` operation
+overwrites the entire `securityContext` object, removing everything the vendor set.
+
+**Rule of thumb:** if you only need to add fields, use Approach 2 (strategic merge).
+If you need to remove or replace fields, use Approach 4 (JSON Patch).
