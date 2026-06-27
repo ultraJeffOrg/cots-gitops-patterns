@@ -1,0 +1,22 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: cots-gitops-patterns
+  description: Patterns for deploying COTS applications on OpenShift using ArgoCD when vendor Helm charts aren't OpenShift-ready
+  annotations:
+    backstage.io/kubernetes-id: cots-gitops-patterns
+    github.com/project-slug: ultraJeffOrg/cots-gitops-patterns
+  tags:
+    - cots
+    - helm
+    - argocd
+    - gitops
+    - openshift
+  links:
+    - url: https://github.com/ultraJeffOrg/cots-gitops-patterns
+      title: GitHub Repo
+      icon: github
+spec:
+  type: documentation
+  lifecycle: production
+  owner: user:default/admin
